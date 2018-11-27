@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>InfoViz: Channeling Hans</title>
+	
+	<script type="text/javascript" src="./d3/d3.min.js"></script>
+	
+	<style type="text/css">
+		.axis path,
+		.axis line {
+		    fill: none;
+		    stroke: black;
+		    shape-rendering: crispEdges;
+		}
+		
+		.axis text {
+		    font-family: sans-serif;
+		    font-size: 11px;
+		}
+
+		.label {
+		    font-size: 10px;
+		}
+
+		.circle {
+  			stroke: #000;
+		}
+	</style>
+</head>
+
+<body>
+
+	<h1>InfoViz: Assignment 2: Part 1</h1>
+	<h3 id = "year_header">Year: 2007</h3>
+	
+	<div class = "demo">
+		<script type="text/javascript">
+
+		// Define margins
+		var margin = { top: 30, right: 20, bottom: 30, left: 30 };
+
+		//Width and height
+		var outer_width = 1500;
+		var outer_height = 600;
+		var svg_width = outer_width - margin.left - margin.right;
+		var svg_height = outer_height - margin.top - margin.bottom;
+
+		// The global data set object
+		var dataset;
+
+		// The year to display
+		display_year = 2007;
+
+		// define a function that filters data by year
+		function yearFilter(value) {
+			return (value.Year == display_year);
+		}
+		
+		// define a function that filters colors by region
+		function color(d) { return d.Region; }
+
+		// Define the d3 color scale
+		colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+
+		// Set up the scale to be used on the x-axis
+		var xScale = d3.scaleLinear()
+					.range([0, svg_width]);
+
+		// Set up the scale to be used on the y-axis
+		var yScale = d3.scaleLinear()
+					.range([svg_height, 0]);
+
+		// Create an x-axis connected to the x scale
+		var xAxis = d3.axisBottom()
+						.scale(xScale)
+						.ticks(6);
+
+		//Define y-axis
+		var yAxis = d3.axisLeft()
+				  		.scale(yScale)
+				  		.ticks(6);
+
+		//Create SVG element as a group with the margins transform applied to it
+		var svg = d3.select("body")
+					.append("svg")
+					.attr("width", svg_width + margin.left + margin.right)
+					.attr("height", svg_height + margin.top + margin.bottom)
+					.append("g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+		function generateVis() {
+			// Filter the data to only include the current year
+			var filtered_dataset = dataset.filter(yearFilter);
+
+			/******** PERFORM DATA JOIN ************/
+			// Join new data with old elements, if any.
+			var countries = svg.selectAll("circle")
+							.data(filtered_dataset);
+		
+			/******** HANDLE UPDATE SELECTION ************/
+			// Update the display of existing elelemnts to match new data
+			// Perform a data join and add countries to the chart
+			countries
+				.attr("cx", function(d, i) {
+					return xScale(d.GDP);
+				})
+				.attr("cy", function(d) {
+					return yScale(d.Global_Competitiveness_Index);
+				})
+				.attr("r", function(d) {
+					return Math.sqrt(d.Population / Math.PI) / 500;
+				})
+				.style("fill", function(d) {
+					return colorScale(color(d));
+				});
+		
+			/******** HANDLE ENTER SELECTION ************/
+			// Create new elements in the dataset
+			// Perform a data join and add countries to the chart
+			countries
+				.enter()
+				.append("circle")
+				.attr("class", "circle")
+				.attr("cx", function(d, i) {
+					return xScale(d.GDP);
+				})
+				.attr("cy", function(d) {
+					return yScale(d.Global_Competitiveness_Index);
+				})
+				.attr("r", function(d) {
+					return Math.sqrt(d.Population / Math.PI) / 500;
+				})
+				.style("fill", function(d) {
+					return colorScale(color(d));
+				});
+		
+			/******** HANDLE EXIT SELECTION ************/
+			// Remove countries that not longer have a matching data eleement
+			countries.exit().remove();
+
+			// Set the year label
+			d3.select("#year_header").text("Year: " + display_year);
+		}
+
+		// Load the file data.csv and generate a visualisation based on it
+		d3.csv("http://localhost:8000/data/GCI_CompleteData4.csv")
+			.then( function(data) {
+				console.log("Data Loaded");
+
+				// convert each variable to numeric type and parse the date
+				data.forEach(function(d) {
+					d['Year'] = +d['Year'];
+					d['Population'] = +d['Population'];
+					d['Global_Competitiveness_Index'] = +d['Global_Competitiveness_Index'];
+					d['GDP'] = +d['GDP'];
+				});
+
+				// Assign  the data object loaded to the global dataset variable
+				dataset = data;
+
+				// Set the domains of the x and y scales using the data
+				var max_gci = d3.max(dataset, function(d) { return d.Global_Competitiveness_Index; });
+				var min_gci = d3.min(dataset, function(d) { return d.Global_Competitiveness_Index; });
+				var max_gdp = d3.max(dataset, function(d) { return d.GDP; });
+				var min_gdp = d3.min(dataset, function(d) { return d.GDP; });
+			
+				xScale.domain([min_gdp, max_gdp]);
+				yScale.domain([min_gci, max_gci]);
+
+				// Create the x-axis
+				svg.append("g")
+					.attr("class", "axis")
+					.attr("transform", "translate(0," + svg_height + ")")
+					.call(xAxis);
+				
+				// Create the x-axis label
+				svg.append("text")
+					.attr("class", "label")
+					.attr("x", svg_width)
+					.attr("y", svg_height - 6)
+					.style("text-anchor", "end")
+					.text("GDP");		
+					
+				// Create the y-axis
+				svg.append("g")
+					.attr("class", "axis")
+					.call(yAxis);
+
+				// Create the y-axis label
+				svg.append("text")
+					.attr("class", "label")
+					.attr("y", 6)
+					.attr("dy", ".75em")
+					.attr("transform", "rotate(-90)")
+					.style("text-anchor", "end")
+					.text("Global Competitive Index");
+
+				// Generate the visualisation
+				generateVis();
+
+				// Iterate through our avilable years.
+				setInterval(function() {
+					display_year = display_year + 1;
+					if(display_year > 2017) {
+						display_year = 2007;
+					}
+					generateVis();
+				}, 1000);
+			});
+		</script>
+	</div>
+</body>	
+</html>
