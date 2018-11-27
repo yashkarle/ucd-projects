@@ -1,0 +1,7 @@
+Following python3 packages were used:
+
+1. json
+2. requests
+3. datetime
+
+Spyder (Python 3.6) IDE was used for writing and running the code.
