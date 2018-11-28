@@ -163,16 +163,13 @@
 					return yScale(d.Global_Competitiveness_Index);
 				})
 				.attr("r", function(d) {
-					if(d.Global_Competitiveness_Index == 0) {
-						radius_multiplier = 0;
-					} else {
-						radius_multiplier = 1;
-					}
-
-					return radius_multiplier * Math.sqrt(d.Population / Math.PI) / 400;
+					return Math.sqrt(d.Population / Math.PI) / 400;
 				})
 				.style("fill", function(d) {
 					return colorScale(color(d));
+				})
+				.style("display", function(d) {
+					return d.Global_Competitiveness_Index == 0 ? "none" : null;
 				});
 
 			/******** HANDLE ENTER SELECTION ************/
@@ -189,16 +186,13 @@
 					return yScale(d.Global_Competitiveness_Index);
 				})
 				.attr("r", function(d) {
-					if(d.Global_Competitiveness_Index == 0) {
-						radius_multiplier = 0;
-					} else {
-						radius_multiplier = 1;
-					}
-
-					return radius_multiplier * Math.sqrt(d.Population / Math.PI) / 400;
+					return Math.sqrt(d.Population / Math.PI) / 400;
 				})
 				.style("fill", function(d) {
 					return colorScale(color(d));
+				})
+				.style("display", function(d) {
+					return d.Global_Competitiveness_Index == 0 ? "none" : null;
 				})
 				.on("mouseover", function(d) {
 					div.transition()
