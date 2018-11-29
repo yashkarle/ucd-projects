@@ -29,7 +29,8 @@
 			margin-left: 15px;
 			cursor: pointer;
 		}
-		.play-button {
+		.play-button,
+		.reset-button {
 			float: left;
 			margin-left: 15px;
 			cursor: pointer;
@@ -54,6 +55,7 @@
 	<hr style="clear:both;">
 	<div class="button-bar">
 		<div class="play-button">Play All</div>
+		<div class="reset-button">Reset</div>
 	</div>
 	<hr style="clear:both;">
 
@@ -88,11 +90,11 @@
 		// The global data set object
 		var dataset;
 
-		// Declare a global variable to check for null values for GCI and set radius accordingly
-		var radius_multiplier;
-
 		// The year to display
 		var display_year = 2007;
+
+		// The selected country for showing trails
+		var country_selected;
 
 		// Define a function that filters data by year
 		function yearFilter(value) {
@@ -105,7 +107,7 @@
 		}
 
 		// Define the d3 color scale
-		colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+		var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
 
 		// Set up the scale to be used on the x-axis
 		var xScale = d3.scaleLog()
@@ -118,7 +120,7 @@
 		// Create an x-axis connected to the x scale
 		var xAxis = d3.axisBottom()
 						.scale(xScale)
-						.ticks(10, d3.format(",d"));
+						.ticks(10, d3.format("d"));
 
 		// Define y-axis
 		var yAxis = d3.axisLeft()
@@ -139,15 +141,39 @@
 					.append("g")
 					.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+		// Function to draw trail for the selected country
+		function drawTrail () {
+			var selected_country_data = dataset.filter(function(d) {
+				if (country_selected != null) {
+					return display_year >= d.Year && country_selected == d.Country;
+				} else {
+					return false;
+				}
+			});
+
+			selected_country_data.forEach(function(d) {
+				svg.append("circle")
+					.attr("class", "circle")
+					.attr("id", "trail")
+					.attr("cx", xScale(d.GDP))
+					.attr("cy", yScale(d.Global_Competitiveness_Index))
+					.attr("r", Math.sqrt(d.Population / Math.PI) / 400)
+					.attr("opacity", 1)
+					.style("fill", colorScale(color(d)));
+			});
+		}
 
 		function generateVis() {
 			// Filter the data to only include the current year
 			var filtered_dataset = dataset.filter(yearFilter);
 
+			// Stop showing the trail
+			d3.selectAll("#trail").remove();
+
 			/******** PERFORM DATA JOIN ************/
 			// Join new data with old elements, if any.
 			var countries = svg.selectAll("circle")
-							.data(filtered_dataset);
+								.data(filtered_dataset);
 
 			/******** HANDLE UPDATE SELECTION ************/
 			// Update the display of existing elelemnts to match new data
@@ -155,21 +181,30 @@
 			countries
 				.transition()
 				.duration(500)
-				.ease(d3.easeLinear)
-				.attr("cx", function(d, i) {
+				.ease(d3.easeSin)
+				.attr("cx", function(d) {
 					return xScale(d.GDP);
 				})
 				.attr("cy", function(d) {
-					return yScale(d.Global_Competitiveness_Index);
+					// Handle the missing gci values by setting it to the last known value
+					if (d.Global_Competitiveness_Index == 0) {
+						return d3.select(this).attr("cy");
+					} else {
+						return yScale(d.Global_Competitiveness_Index);
+					}
 				})
 				.attr("r", function(d) {
 					return Math.sqrt(d.Population / Math.PI) / 400;
 				})
+				.attr("opacity", function(d) {
+					if(d.Country == country_selected || country_selected == null) {
+						return 1;
+					} else {
+						return 0.1;
+					}
+				})
 				.style("fill", function(d) {
 					return colorScale(color(d));
-				})
-				.style("display", function(d) {
-					return d.Global_Competitiveness_Index == 0 ? "none" : null;
 				});
 
 			/******** HANDLE ENTER SELECTION ************/
@@ -179,7 +214,7 @@
 				.enter()
 				.append("circle")
 				.attr("class", "circle")
-				.attr("cx", function(d, i) {
+				.attr("cx", function(d) {
 					return xScale(d.GDP);
 				})
 				.attr("cy", function(d) {
@@ -192,6 +227,7 @@
 					return colorScale(color(d));
 				})
 				.style("display", function(d) {
+					// Check if gci value is present, then only display the element
 					return d.Global_Competitiveness_Index == 0 ? "none" : null;
 				})
 				.on("mouseover", function(d) {
@@ -207,6 +243,16 @@
 					div.transition()
 						.duration(500)
 						.style("opacity", 0);
+				})
+				.on("click", function(d){
+					country_selected = d.Country;
+
+					d3.selectAll(".circle")
+						.filter(function() {
+							return country_selected != d.Country;
+						})
+						.transition()
+						.style("opacity", 0.1);
 				});
 
 			/******** HANDLE EXIT SELECTION ************/
@@ -215,6 +261,9 @@
 
 			// Set the year label
 			d3.select("#year-header").text("Year: " + display_year);
+
+			// Call function to draw trail paths
+			drawTrail();
 		}
 
 
@@ -236,12 +285,11 @@
 
 				// Set the domains of the x and y scales using the data
 				var max_gci = d3.max(dataset, function(d) { return d.Global_Competitiveness_Index; });
-				var min_gci = d3.min(dataset, function(d) { return d.Global_Competitiveness_Index; });
 				var max_gdp = d3.max(dataset, function(d) { return d.GDP; });
 				var min_gdp = d3.min(dataset, function(d) { return d.GDP; });
 
 				xScale.domain([500, max_gdp]);
-				yScale.domain([min_gci, max_gci]);
+				yScale.domain([2, max_gci]);
 
 				// Create the x-axis
 				svg.append("g")
@@ -318,7 +366,30 @@
 
 					// Update the visualisation
 					generateVis();
-				}, 1000);
+				}, 700);
+			});
+
+		d3.select(".reset-button")
+			.on("click", function() {
+				// Deselect all the year buttons
+				d3.select(".selected")
+					.classed("selected", false);
+
+				// Select the clicked button
+				d3.select(this)
+					.classed("selected", true);
+
+				// Reset the display year to 2007
+				display_year = 2007;
+
+				// Stop animation
+				clearInterval(playInterval);
+
+				// Again call generateVis to generate the visualisation from start
+				generateVis();
+
+				// Deselect the selected country
+				country_selected = null;
 			});
 		</script>
 	</div>
