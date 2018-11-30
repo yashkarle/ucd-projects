@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>InfoViz: Channeling Hans</title>
+	<title>InfoViz Assignment 2</title>
 	<script type="text/javascript" src="./d3/d3.min.js"></script>
 	<style type="text/css">
 		.axis path,
@@ -18,7 +18,7 @@
 		    font-size: 11px;
 		}
 
-		#year-header {
+		#year-header, #year-header2 {
 			text-align: center
 		}
 		.button-bar {
@@ -51,7 +51,7 @@
 </head>
 
 <body>
-	<h1>InfoViz: Assignment 2: Part 1</h1>
+	<h1>Global Competitiveness Index vs GDP</h1>
 	<hr style="clear:both;">
 	<div class="button-bar">
 		<div class="play-button">Play All</div>
@@ -74,14 +74,14 @@
 	</div>
 	<hr style="clear:both;">
 
-	<div class="demo">
+	<div id="bubblePlot">
 		<h3 id="year-header">Year: 2007</h3>
 
 		<script type="text/javascript">
-		// Define margins
+		// Define margins of the svg
 		var margin = { top: 30, right: 30, bottom: 30, left: 300 };
 
-		// Width and height
+		// Width and height variables
 		var outer_width = 1300;
 		var outer_height = 650;
 		var svg_width = outer_width - margin.left - margin.right;
@@ -90,21 +90,14 @@
 		// The global data set object
 		var dataset;
 
+		// A global variable to toggle the play interval
+		var playInterval;
+
 		// The year to display
 		var display_year = 2007;
 
 		// The selected country for showing trails
-		var country_selected;
-
-		// Define a function that filters data by year
-		function yearFilter(value) {
-			return (value.Year == display_year);
-		}
-
-		// Define a function that filters colors by region
-		function color(d) {
-			return d.Region;
-		}
+		var country_selected = null;
 
 		// Define the d3 color scale
 		var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
@@ -141,6 +134,16 @@
 					.append("g")
 					.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+		// Define a function that filters data by year
+		function yearFilter(value) {
+			return (value.Year == display_year);
+		}
+
+		// Define a function that filters colors by region
+		function color(d) {
+			return d.Region;
+		}
+
 		// Function to draw trail for the selected country
 		function drawTrail () {
 			var selected_country_data = dataset.filter(function(d) {
@@ -159,7 +162,21 @@
 					.attr("cy", yScale(d.Global_Competitiveness_Index))
 					.attr("r", Math.sqrt(d.Population / Math.PI) / 400)
 					.attr("opacity", 1)
-					.style("fill", colorScale(color(d)));
+					.style("fill", colorScale(color(d)))
+					.on("mouseover", function() {
+						div.transition()
+							.duration(500)
+							.style("opacity", 0.9);
+
+						div.html(country_selected)
+							.style("left", (d3.event.pageX) + "px")
+							.style("top", (d3.event.pageY) + "px");
+						})
+					.on("mouseout", function(d) {
+						div.transition()
+							.duration(500)
+							.style("opacity", 0);
+					});
 			});
 		}
 
@@ -183,10 +200,15 @@
 				.duration(500)
 				.ease(d3.easeSin)
 				.attr("cx", function(d) {
-					return xScale(d.GDP);
+					// Handle the missing gci values by setting it to the last non-zero value
+					if (d.Global_Competitiveness_Index == 0) {
+						return d3.select(this).attr("cx");
+					} else {
+						return xScale(d.GDP);
+					}
 				})
 				.attr("cy", function(d) {
-					// Handle the missing gci values by setting it to the last known value
+					// Handle the missing gci values by setting it to the last non-zero value
 					if (d.Global_Competitiveness_Index == 0) {
 						return d3.select(this).attr("cy");
 					} else {
@@ -237,7 +259,7 @@
 
 					div.html(d.Country)
 						.style("left", (d3.event.pageX) + "px")
-						.style("top", (d3.event.pageY - 20) + "px");
+						.style("top", (d3.event.pageY) + "px");
 				})
 				.on("mouseout", function(d) {
 					div.transition()
@@ -251,7 +273,6 @@
 						.filter(function() {
 							return country_selected != d.Country;
 						})
-						.transition()
 						.style("opacity", 0.1);
 				});
 
@@ -265,7 +286,6 @@
 			// Call function to draw trail paths
 			drawTrail();
 		}
-
 
 		// Load the file data.csv and generate a visualisation based on it
 		d3.csv("http://localhost:8000/data/GCI_CompleteData4.csv")
@@ -319,12 +339,10 @@
 					.style("text-anchor", "end")
 					.text("Global Competitive Index");
 
-				// Generate the visualisation
+				// Generate the visualisations
 				generateVis();
+				generateMultiVis();
 			});
-
-		// A global variable to toggle the play interval
-		var playInterval;
 
 		d3.selectAll(".button")
 			.on("click", function(d) {
@@ -339,8 +357,9 @@
 				// Update the display year
 				display_year = d3.select(this).text();
 
-				// Update the visualisation
+				// Update the visualisations
 				generateVis();
+				generateMultiVis();
 
 				// Stop the animation if user selects a specific year
 				clearInterval(playInterval);
@@ -364,8 +383,9 @@
 						display_year = 2007;
 					}
 
-					// Update the visualisation
+					// Update the visualisations
 					generateVis();
+					generateMultiVis();
 				}, 700);
 			});
 
@@ -385,12 +405,180 @@
 				// Stop animation
 				clearInterval(playInterval);
 
-				// Again call generateVis to generate the visualisation from start
+				// Again call vis functions to generate the visualisationa from start
 				generateVis();
+				generateMultiVis();
 
 				// Deselect the selected country
 				country_selected = null;
 			});
+		</script>
+	</div>
+	<hr style="clear:both;">
+
+
+	<div id="countryDropdown">
+		<h1>12 Pillars for Global Competitiveness Index</h1>
+		<hr style="clear:both;">
+
+		<h3 id="year-header2">Year: 2007</h3>
+
+		Choose Country:
+		<script type="text/javascript">
+
+			svg_width = svg_width / 2;
+
+			//Create SVG element as a group with the margins transform applied to it
+			var svg2 = d3.select("body")
+						.append("svg")
+						.attr("width", svg_width + margin.left + margin.right)
+						.attr("height", svg_height + margin.top + margin.bottom)
+						.append("g")
+						.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+			var pillar_names = ["1st_pillar_Institutions", "2nd_pillar_Infrastructure", "3rd_pillar_Macroeconomic_environment",
+								"4th_pillar_Health_and_primary_education", "5th_pillar_Higher_education_and_training",
+								"6th_pillar_Goods_market_efficiency", "7th_pillar_Labor_market_efficiency",
+								"8th_pillar_Financial_market_development", "9th_pillar_Technological_readiness",
+								"10th_pillar_Market_size", "11th_pillar_Business_sophistication_", "12th_pillar_Innovation"];
+
+			var pillar_names_domain = ["Inst", "Infra", "Env", "H,PE", "HE,T",
+										"Goods", "Lab", "Fin", "Tech", "Market", "Bus", "Inn"];
+
+			var xScale2 = d3.scaleBand()
+							.domain(pillar_names_domain)
+							.range([0, svg_width])
+							.paddingInner(0.05)
+							.paddingOuter(0.05);;
+
+			var yScale2 = d3.scaleLinear()
+							.range([svg_height, 0]);
+
+			var xAxis2 = d3.axisBottom()
+							.scale(xScale2);
+
+			var yAxis2 = d3.axisLeft()
+							.scale(yScale2);
+
+			// Maintain a map of the filtered data and their respective 12 pillars values
+			var pillars_map = {};
+
+			// Keep a track of currently selected country in the dropdown
+			var selected_country = "Albania";
+
+			svg2.append("g")
+				.attr("class", "axis")
+				.attr("transform", "translate(0," + svg_height + ")")
+				.call(xAxis2);
+
+			var yAxisUpdateHandler = svg2.append("g")
+											.attr("class", "axis")
+											.call(yAxis2);
+
+			yAxisUpdateHandler.append("text")
+								.attr("transform", "rotate(-90)")
+								.attr("y", 6)
+								.attr("dy", ".75em")
+								.style("text-anchor", "end")
+								.text("Value");
+
+			// Define a function that filters data for the selected country
+			function countryFilter(value) {
+				return (value.Country == selected_country);
+			}
+
+			// Handler for change in dropdown value
+			var dropdownChangeHandler = function() {
+                    selected_country = d3.select(this).property('value');
+
+					var new_data = pillars_map[selected_country];
+                    addBars(new_data);
+                };
+
+			var country_dropdown = d3.select("#countryDropdown")
+										.insert("select", "svg")
+										.on("change", dropdownChangeHandler);
+
+			var addBars = function (data) {
+				yScale2.domain([0,7]);
+                yAxisUpdateHandler.call(yAxis2);
+
+				var bars = svg2.selectAll(".bar").data(data);
+
+				// Add bars for new data
+				bars.enter()
+					.append("rect")
+					.attr("class", "bar")
+					.attr("x", function(d,i) {
+						return xScale2(pillar_names_domain[i]);
+					})
+					.attr("width", xScale2.bandwidth())
+					.attr("y", function(d) {
+						return yScale2(d);
+					})
+					.attr("height", function(d) {
+						return svg_height - yScale2(d);
+					})
+					.style("fill", "green")
+					.on("mouseover", function(d) {
+						div.transition()
+							.duration(500)
+							.style("opacity", 0.9);
+
+						div.html(d)
+							.style("left", (d3.event.pageX) + "px")
+							.style("top", (d3.event.pageY) + "px");
+					})
+					.on("mouseout", function(d) {
+						div.transition()
+							.duration(500)
+							.style("opacity", 0);
+					});
+
+				// Update old ones
+				bars.transition()
+					.duration(500)
+					.attr("y", function(d) {
+						return yScale2(d);
+					})
+					.attr("height", function(d) {
+						return svg_height - yScale2(d);
+					})
+					.style("fill", "green");
+
+				// Remove old ones
+				bars.exit().remove();
+
+				// Set the year label
+				d3.select("#year-header2").text("Year: " + display_year);
+			};
+
+			// Generate visualisations for bars showing the 12 pillars
+			function generateMultiVis() {
+				// Filter the data to only include the current year
+				var filtered_dataset = dataset.filter(yearFilter);
+
+				filtered_dataset.forEach(function(d) {
+                    var country = d.Country;
+                    pillars_map[country] = [];
+
+                    pillar_names.forEach(function(pillar) {
+                        pillars_map[country].push( +d[pillar] );
+                    });
+                });
+
+				country_dropdown.selectAll("option")
+								.data(filtered_dataset)
+								.enter().append("option")
+								.attr("value", function(d) {
+									return d.Country;
+								})
+								.text(function(d) {
+									return d.Country;
+								});
+
+				addBars(pillars_map[selected_country]);
+			}
 		</script>
 	</div>
 </body>
