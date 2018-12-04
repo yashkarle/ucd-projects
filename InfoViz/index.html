@@ -53,6 +53,7 @@
 <body>
 	<h1>Global Competitiveness Index vs GDP</h1>
 	<hr style="clear:both;">
+
 	<div class="button-bar">
 		<div class="play-button">Play All</div>
 		<div class="reset-button">Reset</div>
@@ -79,10 +80,10 @@
 
 		<script type="text/javascript">
 		// Define margins of the svg
-		var margin = { top: 30, right: 30, bottom: 30, left: 300 };
+		var margin = { top: 30, right: 30, bottom: 30, left: 400 };
 
 		// Width and height variables
-		var outer_width = 1300;
+		var outer_width = 1450;
 		var outer_height = 650;
 		var svg_width = outer_width - margin.left - margin.right;
 		var svg_height = outer_height - margin.top - margin.bottom;
@@ -416,7 +417,6 @@
 	</div>
 	<hr style="clear:both;">
 
-
 	<div id="countryDropdown">
 		<h1>12 Pillars for Global Competitiveness Index</h1>
 		<hr style="clear:both;">
@@ -425,9 +425,6 @@
 
 		Choose Country:
 		<script type="text/javascript">
-
-			svg_width = svg_width / 2;
-
 			//Create SVG element as a group with the margins transform applied to it
 			var svg2 = d3.select("body")
 						.append("svg")
@@ -442,14 +439,14 @@
 								"8th_pillar_Financial_market_development", "9th_pillar_Technological_readiness",
 								"10th_pillar_Market_size", "11th_pillar_Business_sophistication_", "12th_pillar_Innovation"];
 
-			var pillar_names_domain = ["Inst", "Infra", "Env", "H,PE", "HE,T",
-										"Goods", "Lab", "Fin", "Tech", "Market", "Bus", "Inn"];
+			var pillar_names_domain = ["Institutions", "Infrastructure", "Environment", "Health, PE", "HE, Training",
+										"Goods", "Labor", "Finance", "Technology", "Market Size", "Business", "Innovation"];
 
 			var xScale2 = d3.scaleBand()
 							.domain(pillar_names_domain)
 							.range([0, svg_width])
 							.paddingInner(0.05)
-							.paddingOuter(0.05);;
+							.paddingOuter(0.05);
 
 			var yScale2 = d3.scaleLinear()
 							.range([svg_height, 0]);
@@ -464,7 +461,8 @@
 			var pillars_map = {};
 
 			// Keep a track of currently selected country in the dropdown
-			var selected_country = "Albania";
+			var selected_country1 = "Albania";
+			var selected_country2 = null;
 
 			svg2.append("g")
 				.attr("class", "axis")
@@ -482,37 +480,43 @@
 								.style("text-anchor", "end")
 								.text("Value");
 
-			// Define a function that filters data for the selected country
-			function countryFilter(value) {
-				return (value.Country == selected_country);
-			}
-
 			// Handler for change in dropdown value
 			var dropdownChangeHandler = function() {
-                    selected_country = d3.select(this).property('value');
+					var dropdown_id = d3.select(this).attr("id");
 
-					var new_data = pillars_map[selected_country];
-                    addBars(new_data);
+					if(dropdown_id == "dropdown1") {
+						selected_country1 = d3.select(this).property('value');
+						addBars1(pillars_map[selected_country1]);
+					} else {
+						selected_country2 = d3.select(this).property('value');
+						addBars2(pillars_map[selected_country2]);
+					}
                 };
 
 			var country_dropdown = d3.select("#countryDropdown")
 										.insert("select", "svg")
+										.attr("id", "dropdown1")
 										.on("change", dropdownChangeHandler);
 
-			var addBars = function (data) {
+			var country_dropdown2 = d3.select("#countryDropdown")
+										.insert("select", "svg")
+										.attr("id", "dropdown2")
+										.on("change", dropdownChangeHandler);
+
+			var addBars1 = function (data) {
 				yScale2.domain([0,7]);
                 yAxisUpdateHandler.call(yAxis2);
 
-				var bars = svg2.selectAll(".bar").data(data);
+				var bars = svg2.selectAll(".bar1").data(data);
 
 				// Add bars for new data
 				bars.enter()
 					.append("rect")
-					.attr("class", "bar")
+					.attr("class", "bar1")
 					.attr("x", function(d,i) {
 						return xScale2(pillar_names_domain[i]);
 					})
-					.attr("width", xScale2.bandwidth())
+					.attr("width", xScale2.bandwidth() / 2)
 					.attr("y", function(d) {
 						return yScale2(d);
 					})
@@ -538,6 +542,7 @@
 				// Update old ones
 				bars.transition()
 					.duration(500)
+					.ease(d3.easeLinear)
 					.attr("y", function(d) {
 						return yScale2(d);
 					})
@@ -545,6 +550,61 @@
 						return svg_height - yScale2(d);
 					})
 					.style("fill", "green");
+
+				// Remove old ones
+				bars.exit().remove();
+
+				// Set the year label
+				d3.select("#year-header2").text("Year: " + display_year);
+			};
+
+			var addBars2 = function (data) {
+				yScale2.domain([0,7]);
+                yAxisUpdateHandler.call(yAxis2);
+
+				var bars = svg2.selectAll(".bar2").data(data);
+
+				// Add bars for new data
+				bars.enter()
+					.append("rect")
+					.attr("class", "bar2")
+					.attr("x", function(d,i) {
+						return xScale2(pillar_names_domain[i]) + xScale2.bandwidth() / 2;
+					})
+					.attr("width", xScale2.bandwidth() / 2)
+					.attr("y", function(d) {
+						return yScale2(d);
+					})
+					.attr("height", function(d) {
+						return svg_height - yScale2(d);
+					})
+					.style("fill", "blue")
+					.on("mouseover", function(d) {
+						div.transition()
+							.duration(500)
+							.style("opacity", 0.9);
+
+						div.html(d)
+							.style("left", (d3.event.pageX) + "px")
+							.style("top", (d3.event.pageY) + "px");
+					})
+					.on("mouseout", function(d) {
+						div.transition()
+							.duration(500)
+							.style("opacity", 0);
+					});
+
+				// Update old ones
+				bars.transition()
+					.duration(500)
+					.ease(d3.easeLinear)
+					.attr("y", function(d) {
+						return yScale2(d);
+					})
+					.attr("height", function(d) {
+						return svg_height - yScale2(d);
+					})
+					.style("fill", "blue");
 
 				// Remove old ones
 				bars.exit().remove();
@@ -577,7 +637,21 @@
 									return d.Country;
 								});
 
-				addBars(pillars_map[selected_country]);
+				addBars1(pillars_map[selected_country1]);
+
+				country_dropdown2.selectAll("option")
+									.data(filtered_dataset)
+									.enter().append("option")
+									.attr("value", function(d) {
+										return d.Country;
+									})
+									.text(function(d) {
+										return d.Country;
+									});
+
+				if(selected_country2 != null) {
+					addBars2(pillars_map[selected_country2]);
+				}
 			}
 		</script>
 	</div>
