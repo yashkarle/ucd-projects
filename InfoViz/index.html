@@ -99,6 +99,9 @@
 		// The year to display
 		var display_year = 2007;
 
+		// Value by which we scale large population values
+		var population_scale = 330;
+
 		// The selected country for showing trails
 		var country_selected = null;
 
@@ -180,10 +183,11 @@
 					.attr("id", "trail")
 					.attr("cx", xScale(d.GDP))
 					.attr("cy", yScale(d.Global_Competitiveness_Index))
-					.attr("r", Math.sqrt(d.Population / Math.PI) / 300)
+					.attr("r", Math.sqrt(d.Population / Math.PI) / population_scale)
 					.attr("opacity", 1)
 					.style("fill", colorScale(color(d)))
 					.on("mouseover", function() {
+						// Draw help lines and show data on mouseover
 						var lineX = d3.select(this).attr("cx");
 						var lineY = d3.select(this).attr("cy");
 						drawHelpLines(lineX, lineY);
@@ -197,6 +201,7 @@
 							.style("top", (d3.event.pageY) + "px");
 						})
 					.on("mouseout", function(d) {
+						// Revert changes done on mouseover
 						div.transition()
 							.duration(500)
 							.style("opacity", 0);
@@ -213,7 +218,6 @@
 			// Stop showing the trail
 			d3.selectAll("#trail").remove();
 
-			/******** PERFORM DATA JOIN ************/
 			// Join new data with old elements, if any.
 			var countries = svg.selectAll("circle")
 								.data(filtered_dataset);
@@ -224,7 +228,7 @@
 							 .enter().append("g")
 							 .attr("class", "legend")
 							 .attr("transform", function (d,i) {
-								 return "translate(0," + i * 20 + ")"
+								 return "translate(0," + i * 20 + ")";
 								});
 
 			legend.append("rect")
@@ -243,9 +247,7 @@
 						return d;
 					});
 
-			/******** HANDLE UPDATE SELECTION ************/
-			// Update the display of existing elelemnts to match new data
-			// Perform a data join and add countries to the chart
+			// Handle the update transitions
 			countries
 				.transition()
 				.duration(500)
@@ -267,9 +269,10 @@
 					}
 				})
 				.attr("r", function(d) {
-					return Math.sqrt(d.Population / Math.PI) / 300;
+					return Math.sqrt(d.Population / Math.PI) / population_scale;
 				})
 				.attr("opacity", function(d) {
+					// Modify the opacity for the selected country and reduce the opacity for others
 					if(d.Country == country_selected || country_selected == null) {
 						return 1;
 					} else {
@@ -280,9 +283,8 @@
 					return colorScale(color(d));
 				});
 
-			/******** HANDLE ENTER SELECTION ************/
-			// Create new elements in the dataset
-			// Perform a data join and add countries to the chart
+
+			// Handle the enter transitions
 			countries
 				.enter()
 				.append("circle")
@@ -294,7 +296,7 @@
 					return yScale(d.Global_Competitiveness_Index);
 				})
 				.attr("r", function(d) {
-					return Math.sqrt(d.Population / Math.PI) / 300;
+					return Math.sqrt(d.Population / Math.PI) / population_scale;
 				})
 				.style("fill", function(d) {
 					return colorScale(color(d));
@@ -304,6 +306,7 @@
 					return d.Global_Competitiveness_Index == 0 ? "none" : null;
 				})
 				.on("mouseover", function(d) {
+					// Add the help lines and show the values associated with particular country
 					var lineX = d3.select(this).attr("cx");
 					var lineY = d3.select(this).attr("cy");
 					drawHelpLines(lineX, lineY);
@@ -317,6 +320,7 @@
 						.style("top", (d3.event.pageY) + "px");
 				})
 				.on("mouseout", function(d) {
+					// Revert the changes done on mouseover
 					div.transition()
 						.duration(500)
 						.style("opacity", 0);
@@ -324,6 +328,7 @@
 					d3.selectAll(".help-line").remove();
 				})
 				.on("click", function(d){
+					// Filter out countries other than the clicked country and reduce their opacity
 					country_selected = d.Country;
 
 					d3.selectAll(".circle")
@@ -333,7 +338,6 @@
 						.style("opacity", 0.1);
 				});
 
-			/******** HANDLE EXIT SELECTION ************/
 			// Remove countries that no longer have a matching data eleement
 			countries.exit().remove();
 
@@ -359,9 +363,15 @@
 				dataset = data;
 
 				// Set the domains of the x and y scales using the data
-				var max_gci = d3.max(dataset, function(d) { return d.Global_Competitiveness_Index; });
-				var max_gdp = d3.max(dataset, function(d) { return d.GDP; });
-				var min_gdp = d3.min(dataset, function(d) { return d.GDP; });
+				var max_gci = d3.max(dataset, function(d) {
+					return d.Global_Competitiveness_Index;
+				});
+				var max_gdp = d3.max(dataset, function(d) {
+					return d.GDP;
+				});
+				var min_gdp = d3.min(dataset, function(d) {
+					return d.GDP;
+				});
 
 				xScale.domain([500, max_gdp]);
 				yScale.domain([2, max_gci]);
@@ -481,7 +491,7 @@
 					// Stop animation
 					clearInterval(playInterval);
 
-					// Again call vis functions to generate the visualisationa from start
+					// Again call visualisation functions to generate the visualisationa from start
 					generateVis();
 					generateMultiVis();
 
@@ -498,8 +508,8 @@
 
 		<h3 id="year-header2">Year: 2007</h3>
 		<div class="legend"></div>
-		<div id="countryDropdown1">Country 1:  </div>
-		<div id="countryDropdown2">Country 2:  </div>
+		<div id="countryDropdown1">Country 1: </div>
+		<div id="countryDropdown2">Country 2: </div>
 
 		<script type="text/javascript">
 			//Create SVG element as a group with the margins transform applied to it
@@ -510,27 +520,33 @@
 						.append("g")
 						.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+			// Set of the original pillar names in the data that we wish to fetch data against
 			var pillar_names = ["1st_pillar_Institutions", "2nd_pillar_Infrastructure", "3rd_pillar_Macroeconomic_environment",
 								"4th_pillar_Health_and_primary_education", "5th_pillar_Higher_education_and_training",
 								"6th_pillar_Goods_market_efficiency", "7th_pillar_Labor_market_efficiency",
 								"8th_pillar_Financial_market_development", "9th_pillar_Technological_readiness",
 								"10th_pillar_Market_size", "11th_pillar_Business_sophistication_", "12th_pillar_Innovation"];
 
+			// Set of shortened pillar names for axis labelling purpose
 			var pillar_names_domain = ["Institutions", "Infrastructure", "Environment", "Health, PE", "HE, Training",
 										"Goods", "Labor", "Finance", "Technology", "Market Size", "Business", "Innovation"];
 
+			// Define the scale for x-axis
 			var xScale2 = d3.scaleBand()
 							.domain(pillar_names_domain)
 							.range([0, svg_width])
 							.paddingInner(0.05)
 							.paddingOuter(0.05);
 
+			// Define the scale for y-axis
 			var yScale2 = d3.scaleLinear()
 							.range([svg_height, 0]);
 
+			// Define the x-axis
 			var xAxis2 = d3.axisBottom()
 							.scale(xScale2);
 
+			// Define the x-axis
 			var yAxis2 = d3.axisLeft()
 							.scale(yScale2);
 
@@ -538,14 +554,16 @@
 			var pillars_map = {};
 
 			// Keep a track of currently selected country in the dropdown
-			var selected_country1 = "Albania";
-			var selected_country2 = "Algeria";
+			var selected_country1 = "Ireland";
+			var selected_country2 = "India";
 
+			// Call the x-axis
 			svg2.append("g")
 				.attr("class", "axis")
 				.attr("transform", "translate(0," + svg_height + ")")
 				.call(xAxis2);
 
+			// A handler that updates the bar heights after change in dropdown selection and call the y-axis
 			var yAxisUpdateHandler = svg2.append("g")
 											.attr("class", "axis")
 											.call(yAxis2);
@@ -561,6 +579,7 @@
 			var dropdownChangeHandler = function() {
 					var dropdown_id = d3.select(this).attr("id");
 
+					// Check which dropdown selection was modified
 					if(dropdown_id == "dropdown1") {
 						selected_country1 = d3.select(this).property('value');
 						addBars1(pillars_map[selected_country1]);
@@ -570,16 +589,19 @@
 					}
                 };
 
+			// Dropdown menu for choice of 1st country
 			var country_dropdown1 = d3.select("#countryDropdown1")
 										.insert("select", "svg")
 										.attr("id", "dropdown1")
 										.on("change", dropdownChangeHandler);
 
+			// Dropdown menu for choice of 2nd country
 			var country_dropdown2 = d3.select("#countryDropdown2")
 										.insert("select", "svg")
 										.attr("id", "dropdown2")
 										.on("change", dropdownChangeHandler);
 
+			// Function to add bars for the 1st selected country
 			var addBars1 = function (data) {
 				yScale2.domain([0,7]);
                 yAxisUpdateHandler.call(yAxis2);
@@ -602,6 +624,7 @@
 					})
 					.style("fill", "green")
 					.on("mouseover", function(d,i) {
+						// Show pillar name and value on mouseover
 						div.transition()
 							.duration(500)
 							.style("opacity", 0.9);
@@ -611,6 +634,7 @@
 							.style("top", (d3.event.pageY) + "px");
 					})
 					.on("mouseout", function(d) {
+						// Revert changes done on mouseover
 						div.transition()
 							.duration(500)
 							.style("opacity", 0);
@@ -635,6 +659,7 @@
 				d3.select("#year-header2").text("Year: " + display_year);
 			};
 
+			// Function to add bars for the 2nd selected country
 			var addBars2 = function (data) {
 				yScale2.domain([0,7]);
                 yAxisUpdateHandler.call(yAxis2);
@@ -657,6 +682,7 @@
 					})
 					.style("fill", "orange")
 					.on("mouseover", function(d,i) {
+						// Show pillar name and value on mouseover
 						div.transition()
 							.duration(500)
 							.style("opacity", 0.9);
@@ -666,6 +692,7 @@
 							.style("top", (d3.event.pageY) + "px");
 					})
 					.on("mouseout", function(d) {
+						// Revert the changes done on mouseover
 						div.transition()
 							.duration(500)
 							.style("opacity", 0);
@@ -702,7 +729,7 @@
 								});
 
 				legend.append("rect")
-					.attr("x", 750)
+					.attr("x", 950)
 					.attr("y", -20)
 					.attr("width", 10)
 					.attr("height", 10)
@@ -715,31 +742,36 @@
 					});
 
 				legend.append("text")
-					.attr("x", 770)
+					.attr("x", 970)
 					.attr("y", -10)
 					.text(function(d,i) {
 						return d;
 					});
 
+				// Prepare a map of all the countries and their respective 12 pillar values
 				filtered_dataset.forEach(function(d) {
                     var country = d.Country;
                     pillars_map[country] = [];
 
                     pillar_names.forEach(function(pillar) {
-                        pillars_map[country].push( +d[pillar] );
+                        pillars_map[country].push(+d[pillar]);
                     });
                 });
 
 				country_dropdown1.selectAll("option")
-								.data(filtered_dataset)
-								.enter().append("option")
-								.attr("value", function(d) {
-									return d.Country;
-								})
-								.text(function(d) {
-									return d.Country;
-								});
+									.data(filtered_dataset)
+									.enter().append("option")
+									.attr("value", function(d) {
+										return d.Country;
+									})
+									.text(function(d) {
+										return d.Country;
+									})
+									.property("selected", function(d,i) {
+										return d.Country == selected_country1;
+									});
 
+				// Call the function to add bars for the 1st selected country
 				addBars1(pillars_map[selected_country1]);
 
 				country_dropdown2.selectAll("option")
@@ -751,8 +783,11 @@
 									.text(function(d) {
 										return d.Country;
 									})
-									.property("selected", function(d, i) { return i == 1; });
+									.property("selected", function(d,i) {
+										return d.Country == selected_country2;
+									});
 
+				// Call the function to add bars for the 2nd selected country
 				addBars2(pillars_map[selected_country2]);
 			}
 		</script>
