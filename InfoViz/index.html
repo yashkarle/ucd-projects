@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>InfoViz Assignment 2</title>
+	<title>InfoViz Assignment 2: Yash Karle</title>
 	<script type="text/javascript" src="./d3/d3.min.js"></script>
 	<style type="text/css">
 		.axis path,
@@ -62,7 +62,7 @@
 		}
 		.help-line {
 			stroke-dasharray: 3;
-            stroke-opacity: 0.9;
+            stroke-opacity: 0.7;
 			stroke: rgb(255, 0, 0);
 		}
 	</style>
@@ -253,12 +253,7 @@
 				.duration(500)
 				.ease(d3.easeSin)
 				.attr("cx", function(d) {
-					// Handle the missing gci values by setting it to the last non-zero value
-					if (d.Global_Competitiveness_Index == 0) {
-						return d3.select(this).attr("cx");
-					} else {
-						return xScale(d.GDP);
-					}
+					return xScale(d.GDP);
 				})
 				.attr("cy", function(d) {
 					// Handle the missing gci values by setting it to the last non-zero value
@@ -273,10 +268,11 @@
 				})
 				.attr("opacity", function(d) {
 					// Modify the opacity for the selected country and reduce the opacity for others
-					if(d.Country == country_selected || country_selected == null) {
+					// Also to point out that we are freezing the bubbles when we get a missing gci value
+					if(d.Country == country_selected || country_selected == null && d.Global_Competitiveness_Index != 0) {
 						return 1;
 					} else {
-						return 0.1;
+						return 0.2;
 					}
 				})
 				.style("fill", function(d) {
@@ -303,6 +299,7 @@
 				})
 				.style("display", function(d) {
 					// Check if gci value is present, then only display the element
+					// This is a part of handling the missing gci values
 					return d.Global_Competitiveness_Index == 0 ? "none" : null;
 				})
 				.on("mouseover", function(d) {
@@ -335,7 +332,7 @@
 						.filter(function() {
 							return country_selected != d.Country;
 						})
-						.style("opacity", 0.1);
+						.style("opacity", 0.2);
 				});
 
 			// Remove countries that no longer have a matching data eleement
@@ -348,8 +345,8 @@
 			drawTrail();
 		}
 
-		// Load the file data.csv and generate a visualisation based on it
-		d3.csv("http://localhost:8000/data/GCI_CompleteData4.csv")
+		// Load the data file and do some pre-processing for setting up everything
+		d3.csv("./data/GCI_CompleteData4.csv")
 			.then( function(data) {
 				// Handle numeric type data
 				data.forEach(function(d) {
@@ -402,7 +399,7 @@
 					.attr("dy", ".75em")
 					.attr("transform", "rotate(-90)")
 					.style("text-anchor", "end")
-					.text("Global Competitive Index");
+					.text("Global Competitiveness Index");
 
 				// Generate the visualisations
 				generateVis();
@@ -514,11 +511,11 @@
 		<script type="text/javascript">
 			//Create SVG element as a group with the margins transform applied to it
 			var svg2 = d3.select("body")
-						.append("svg")
-						.attr("width", svg_width + margin.left + margin.right)
-						.attr("height", svg_height + margin.top + margin.bottom)
-						.append("g")
-						.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+							.append("svg")
+							.attr("width", svg_width + margin.left + margin.right)
+							.attr("height", svg_height + margin.top + margin.bottom)
+							.append("g")
+							.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 			// Set of the original pillar names in the data that we wish to fetch data against
 			var pillar_names = ["1st_pillar_Institutions", "2nd_pillar_Infrastructure", "3rd_pillar_Macroeconomic_environment",
@@ -721,32 +718,32 @@
 
 				// Draw the legend representing colors for each of the Regions
 				var legend = svg2.selectAll(".legend")
-							 .data(["Country1", "Country2"])
-							 .enter().append("g")
-							 .attr("class", "legend")
-							 .attr("transform", function (d,i) {
-								 return "translate(0," + i * 20 + ")";
-								});
+									.data(["Country1", "Country2"])
+									.enter().append("g")
+									.attr("class", "legend")
+									.attr("transform", function (d,i) {
+										return "translate(0," + i * 20 + ")";
+									});
 
 				legend.append("rect")
-					.attr("x", 950)
-					.attr("y", -20)
-					.attr("width", 10)
-					.attr("height", 10)
-					.style("fill", function(d,i) {
-						if(i == 0) {
-							return "green";
-						} else {
-							return "orange";
-						}
-					});
+						.attr("x", 950)
+						.attr("y", -20)
+						.attr("width", 10)
+						.attr("height", 10)
+						.style("fill", function(d,i) {
+							if(i == 0) {
+								return "green";
+							} else {
+								return "orange";
+							}
+						});
 
 				legend.append("text")
-					.attr("x", 970)
-					.attr("y", -10)
-					.text(function(d,i) {
-						return d;
-					});
+						.attr("x", 970)
+						.attr("y", -10)
+						.text(function(d,i) {
+							return d;
+						});
 
 				// Prepare a map of all the countries and their respective 12 pillar values
 				filtered_dataset.forEach(function(d) {
