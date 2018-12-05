@@ -22,17 +22,17 @@
 			text-align: center
 		}
 		.button-bar {
-			width: 600px;
+			width: 1665px;
 		}
 		.button {
 			float: left;
-			margin-left: 15px;
+			margin-left: 105px;
 			cursor: pointer;
 		}
 		.play-button,
 		.reset-button {
 			float: left;
-			margin-left: 15px;
+			margin-left: 500px;
 			cursor: pointer;
 		}
 		.selected {
@@ -42,10 +42,28 @@
 		.circle {
   			stroke: #000;
 		}
+		.circle:hover {
+			opacity: 0.7;
+		}
+		.bar1, .bar2 {
+			stroke: #000;
+		}
+		.bar1:hover, .bar2:hover {
+			opacity: 0.7;
+		}
+
 		div.tooltip {
+			display: block;
 			position: absolute;
 			text-align: center;
+			background-color: lightgoldenrodyellow;
+			padding: 5px;
 			font-size: 12px;
+		}
+		.help-line {
+			stroke-dasharray: 3;
+            stroke-opacity: 0.9;
+			stroke: rgb(255, 0, 0);
 		}
 	</style>
 </head>
@@ -54,29 +72,9 @@
 	<h1>Global Competitiveness Index vs GDP</h1>
 	<hr style="clear:both;">
 
-	<div class="button-bar">
-		<div class="play-button">Play All</div>
-		<div class="reset-button">Reset</div>
-	</div>
-	<hr style="clear:both;">
-
-	<div class="button-bar">
-		<div class="button selected">2007</div>
-		<div class="button">2008</div>
-		<div class="button">2009</div>
-		<div class="button">2010</div>
-		<div class="button">2011</div>
-		<div class="button">2012</div>
-		<div class="button">2013</div>
-		<div class="button">2014</div>
-		<div class="button">2015</div>
-		<div class="button">2016</div>
-		<div class="button">2017</div>
-	</div>
-	<hr style="clear:both;">
-
 	<div id="bubblePlot">
 		<h3 id="year-header">Year: 2007</h3>
+		<div class="legend"></div>
 
 		<script type="text/javascript">
 		// Define margins of the svg
@@ -90,6 +88,10 @@
 
 		// The global data set object
 		var dataset;
+
+		// Set of regions for showing the color legend
+		var regions = ["Emerging and Developing Europe", "Middle East, North Africa, and Pakistan", "Sub-Saharan Africa",
+		"Latin America and the Caribbean", "Commonwealth of Independent States", "Advanced economies", "Emerging and Developing Asia"]
 
 		// A global variable to toggle the play interval
 		var playInterval;
@@ -145,6 +147,23 @@
 			return d.Region;
 		}
 
+		// Function to draw the help lines on either axes to imporve readability
+		function drawHelpLines(lineX, lineY) {
+			svg.append("line")
+				.attr("class", "help-line")
+				.attr("x1", lineX)
+				.attr("y1", lineY)
+				.attr("x2", 0)
+				.attr("y2", lineY);
+
+			svg.append("line")
+				.attr("class", "help-line")
+				.attr("x1", lineX)
+				.attr("y1", lineY)
+				.attr("x2", lineX)
+				.attr("y2", svg_height);
+		}
+
 		// Function to draw trail for the selected country
 		function drawTrail () {
 			var selected_country_data = dataset.filter(function(d) {
@@ -161,15 +180,19 @@
 					.attr("id", "trail")
 					.attr("cx", xScale(d.GDP))
 					.attr("cy", yScale(d.Global_Competitiveness_Index))
-					.attr("r", Math.sqrt(d.Population / Math.PI) / 400)
+					.attr("r", Math.sqrt(d.Population / Math.PI) / 300)
 					.attr("opacity", 1)
 					.style("fill", colorScale(color(d)))
 					.on("mouseover", function() {
+						var lineX = d3.select(this).attr("cx");
+						var lineY = d3.select(this).attr("cy");
+						drawHelpLines(lineX, lineY);
+
 						div.transition()
 							.duration(500)
 							.style("opacity", 0.9);
 
-						div.html(country_selected)
+						div.html(d.Country + "<br />GDP: " + d.GDP + "<br />GCI: " + d.Global_Competitiveness_Index)
 							.style("left", (d3.event.pageX) + "px")
 							.style("top", (d3.event.pageY) + "px");
 						})
@@ -177,6 +200,8 @@
 						div.transition()
 							.duration(500)
 							.style("opacity", 0);
+
+						d3.selectAll(".help-line").remove();
 					});
 			});
 		}
@@ -192,6 +217,31 @@
 			// Join new data with old elements, if any.
 			var countries = svg.selectAll("circle")
 								.data(filtered_dataset);
+
+			// Draw the legend representing colors for each of the Regions
+			var legend = svg.selectAll(".legend")
+							 .data(regions)
+							 .enter().append("g")
+							 .attr("class", "legend")
+							 .attr("transform", function (d,i) {
+								 return "translate(0," + i * 20 + ")"
+								});
+
+			legend.append("rect")
+					.attr("x", -350)
+					.attr("y", 0)
+					.attr("width", 10)
+					.attr("height", 10)
+					.style("fill", function(d) {
+						return colorScale(d);
+					});
+
+			legend.append("text")
+					.attr("x", -320)
+					.attr("y", 10)
+					.text(function(d,i) {
+						return d;
+					});
 
 			/******** HANDLE UPDATE SELECTION ************/
 			// Update the display of existing elelemnts to match new data
@@ -217,7 +267,7 @@
 					}
 				})
 				.attr("r", function(d) {
-					return Math.sqrt(d.Population / Math.PI) / 400;
+					return Math.sqrt(d.Population / Math.PI) / 300;
 				})
 				.attr("opacity", function(d) {
 					if(d.Country == country_selected || country_selected == null) {
@@ -244,7 +294,7 @@
 					return yScale(d.Global_Competitiveness_Index);
 				})
 				.attr("r", function(d) {
-					return Math.sqrt(d.Population / Math.PI) / 400;
+					return Math.sqrt(d.Population / Math.PI) / 300;
 				})
 				.style("fill", function(d) {
 					return colorScale(color(d));
@@ -254,11 +304,15 @@
 					return d.Global_Competitiveness_Index == 0 ? "none" : null;
 				})
 				.on("mouseover", function(d) {
+					var lineX = d3.select(this).attr("cx");
+					var lineY = d3.select(this).attr("cy");
+					drawHelpLines(lineX, lineY);
+
 					div.transition()
 						.duration(500)
 						.style("opacity", 0.9);
 
-					div.html(d.Country)
+					div.html(d.Country + "<br />GDP: " + d.GDP + "<br />GCI: " + d.Global_Competitiveness_Index)
 						.style("left", (d3.event.pageX) + "px")
 						.style("top", (d3.event.pageY) + "px");
 				})
@@ -266,6 +320,8 @@
 					div.transition()
 						.duration(500)
 						.style("opacity", 0);
+
+					d3.selectAll(".help-line").remove();
 				})
 				.on("click", function(d){
 					country_selected = d.Country;
@@ -291,8 +347,6 @@
 		// Load the file data.csv and generate a visualisation based on it
 		d3.csv("http://localhost:8000/data/GCI_CompleteData4.csv")
 			.then( function(data) {
-				console.log("Data Loaded");
-
 				// Handle numeric type data
 				data.forEach(function(d) {
 					d['Year'] = +d['Year'];
@@ -344,86 +398,109 @@
 				generateVis();
 				generateMultiVis();
 			});
-
-		d3.selectAll(".button")
-			.on("click", function(d) {
-				// Deselect all the year buttons
-				d3.select(".selected")
-					.classed("selected", false);
-
-				// Select the clicked button
-				d3.select(this)
-					.classed("selected", true);
-
-				// Update the display year
-				display_year = d3.select(this).text();
-
-				// Update the visualisations
-				generateVis();
-				generateMultiVis();
-
-				// Stop the animation if user selects a specific year
-				clearInterval(playInterval);
-			});
-
-		d3.select(".play-button")
-			.on("click", function() {
-				// Deselect all the year buttons
-				d3.select(".selected")
-					.classed("selected", false);
-
-				// Select the clicked button
-				d3.select(this)
-					.classed("selected", true);
-
-				// Interval callback
-				playInterval = setInterval(function() {
-					display_year++;
-
-					if(display_year > 2017) {
-						display_year = 2007;
-					}
-
-					// Update the visualisations
-					generateVis();
-					generateMultiVis();
-				}, 700);
-			});
-
-		d3.select(".reset-button")
-			.on("click", function() {
-				// Deselect all the year buttons
-				d3.select(".selected")
-					.classed("selected", false);
-
-				// Select the clicked button
-				d3.select(this)
-					.classed("selected", true);
-
-				// Reset the display year to 2007
-				display_year = 2007;
-
-				// Stop animation
-				clearInterval(playInterval);
-
-				// Again call vis functions to generate the visualisationa from start
-				generateVis();
-				generateMultiVis();
-
-				// Deselect the selected country
-				country_selected = null;
-			});
 		</script>
 	</div>
 	<hr style="clear:both;">
 
-	<div id="countryDropdown">
+	<div class="button-bar">
+		<div class="play-button">Play All</div>
+		<div class="reset-button">Reset</div>
+		<hr style="clear:both;">
+
+		<div class="button selected">2007</div>
+		<div class="button">2008</div>
+		<div class="button">2009</div>
+		<div class="button">2010</div>
+		<div class="button">2011</div>
+		<div class="button">2012</div>
+		<div class="button">2013</div>
+		<div class="button">2014</div>
+		<div class="button">2015</div>
+		<div class="button">2016</div>
+		<div class="button">2017</div>
+
+		<script type="text/javascript">
+			d3.selectAll(".button")
+				.on("click", function(d) {
+					// Deselect all the year buttons
+					d3.select(".selected")
+						.classed("selected", false);
+
+					// Select the clicked button
+					d3.select(this)
+						.classed("selected", true);
+
+					// Update the display year
+					display_year = d3.select(this).text();
+
+					// Update the visualisations
+					generateVis();
+					generateMultiVis();
+
+					// Stop the animation if user selects a specific year
+					clearInterval(playInterval);
+				});
+
+			d3.select(".play-button")
+				.on("click", function() {
+					// Deselect all the year buttons
+					d3.select(".selected")
+						.classed("selected", false);
+
+					// Select the clicked button
+					d3.select(this)
+						.classed("selected", true);
+
+					// Interval callback
+					playInterval = setInterval(function() {
+						display_year++;
+
+						if(display_year > 2017) {
+							display_year = 2007;
+						}
+
+						// Update the visualisations
+						generateVis();
+						generateMultiVis();
+					}, 700);
+				});
+
+			d3.select(".reset-button")
+				.on("click", function() {
+					// Deselect all the year buttons
+					d3.select(".selected")
+						.classed("selected", false);
+
+					// Select the clicked button
+					d3.select(this)
+						.classed("selected", true);
+
+					// Reset the display year to 2007
+					display_year = 2007;
+
+					// Stop animation
+					clearInterval(playInterval);
+
+					// Again call vis functions to generate the visualisationa from start
+					generateVis();
+					generateMultiVis();
+
+					// Deselect the selected country
+					country_selected = null;
+				});
+		</script>
+	</div>
+	<hr style="clear:both;">
+
+	<div id="barChart">
 		<h1>12 Pillars for Global Competitiveness Index</h1>
 		<hr style="clear:both;">
 
 		<h3 id="year-header2">Year: 2007</h3>
+		<div class="legend"></div>
+		<div id="countryDropdown1">Country 1:  </div>
+		<div id="countryDropdown2">Country 2:  </div>
 
-		Choose Country:
 		<script type="text/javascript">
 			//Create SVG element as a group with the margins transform applied to it
 			var svg2 = d3.select("body")
@@ -462,7 +539,7 @@
 
 			// Keep a track of currently selected country in the dropdown
 			var selected_country1 = "Albania";
-			var selected_country2 = null;
+			var selected_country2 = "Algeria";
 
 			svg2.append("g")
 				.attr("class", "axis")
@@ -493,12 +570,12 @@
 					}
                 };
 
-			var country_dropdown = d3.select("#countryDropdown")
+			var country_dropdown1 = d3.select("#countryDropdown1")
 										.insert("select", "svg")
 										.attr("id", "dropdown1")
 										.on("change", dropdownChangeHandler);
 
-			var country_dropdown2 = d3.select("#countryDropdown")
+			var country_dropdown2 = d3.select("#countryDropdown2")
 										.insert("select", "svg")
 										.attr("id", "dropdown2")
 										.on("change", dropdownChangeHandler);
@@ -524,12 +601,12 @@
 						return svg_height - yScale2(d);
 					})
 					.style("fill", "green")
-					.on("mouseover", function(d) {
+					.on("mouseover", function(d,i) {
 						div.transition()
 							.duration(500)
 							.style("opacity", 0.9);
 
-						div.html(d)
+						div.html(pillar_names[i] + ": " + d)
 							.style("left", (d3.event.pageX) + "px")
 							.style("top", (d3.event.pageY) + "px");
 					})
@@ -578,13 +655,13 @@
 					.attr("height", function(d) {
 						return svg_height - yScale2(d);
 					})
-					.style("fill", "blue")
-					.on("mouseover", function(d) {
+					.style("fill", "orange")
+					.on("mouseover", function(d,i) {
 						div.transition()
 							.duration(500)
 							.style("opacity", 0.9);
 
-						div.html(d)
+						div.html(pillar_names[i] + ": " + d)
 							.style("left", (d3.event.pageX) + "px")
 							.style("top", (d3.event.pageY) + "px");
 					})
@@ -604,19 +681,45 @@
 					.attr("height", function(d) {
 						return svg_height - yScale2(d);
 					})
-					.style("fill", "blue");
+					.style("fill", "orange");
 
 				// Remove old ones
 				bars.exit().remove();
-
-				// Set the year label
-				d3.select("#year-header2").text("Year: " + display_year);
 			};
 
 			// Generate visualisations for bars showing the 12 pillars
 			function generateMultiVis() {
 				// Filter the data to only include the current year
 				var filtered_dataset = dataset.filter(yearFilter);
+
+				// Draw the legend representing colors for each of the Regions
+				var legend = svg2.selectAll(".legend")
+							 .data(["Country1", "Country2"])
+							 .enter().append("g")
+							 .attr("class", "legend")
+							 .attr("transform", function (d,i) {
+								 return "translate(0," + i * 20 + ")";
+								});
+
+				legend.append("rect")
+					.attr("x", 750)
+					.attr("y", -20)
+					.attr("width", 10)
+					.attr("height", 10)
+					.style("fill", function(d,i) {
+						if(i == 0) {
+							return "green";
+						} else {
+							return "orange";
+						}
+					});
+
+				legend.append("text")
+					.attr("x", 770)
+					.attr("y", -10)
+					.text(function(d,i) {
+						return d;
+					});
 
 				filtered_dataset.forEach(function(d) {
                     var country = d.Country;
@@ -627,7 +730,7 @@
                     });
                 });
 
-				country_dropdown.selectAll("option")
+				country_dropdown1.selectAll("option")
 								.data(filtered_dataset)
 								.enter().append("option")
 								.attr("value", function(d) {
@@ -647,11 +750,10 @@
 									})
 									.text(function(d) {
 										return d.Country;
-									});
+									})
+									.property("selected", function(d, i) { return i == 1; });
 
-				if(selected_country2 != null) {
-					addBars2(pillars_map[selected_country2]);
-				}
+				addBars2(pillars_map[selected_country2]);
 			}
 		</script>
 	</div>
