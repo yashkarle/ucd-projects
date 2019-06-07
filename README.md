@@ -1,4 +1,4 @@
-# UCD-CS-NL
+# ucd-projects
 Coursework and Assignments as part of the CS NL course at UCD
 
 1. Information Visualisation Assignemnt:  
